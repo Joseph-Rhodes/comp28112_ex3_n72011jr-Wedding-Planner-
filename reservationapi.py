@@ -73,8 +73,7 @@ class ReservationApi:
         }
 
     def _send_request(self, method: str, endpoint: str) -> dict:
-        """Send a request to the reservation API and convert errors to
-           appropriate exceptions"""
+        """Send a request to the reservation API and convert errors to appropriate exceptions"""
         url = f"{self.base_url}/{endpoint}"
         headers = self._headers()
 
@@ -108,7 +107,10 @@ class ReservationApi:
             except Exception as e:
                 raise e
 
+            time.sleep(1)  # Add a one-second delay between requests
+
         raise HTTPError("Maximum retries exceeded. Request failed.")
+
     
      # Allow for multiple retries if needed
             # Perform the request.
@@ -148,23 +150,36 @@ class ReservationApi:
             response = self._send_request("GET", endpoint)
             return response
         except HTTPError as e:
-            print("Error retrieving held slots:", e)
+            if e.response is not None and e.response.status_code == 500:
+            # Don't print the error message for server-side errors
+                pass
+            else:
+                print("Error retrieving held slots:", e)
+
 
     def release_slot(self, slot_id):
         """Release a slot currently held by the client"""
         cancellation_success = False  # Flag to track if any cancellation was successful
+    
         try:
             endpoint = f"reservation/{slot_id}"
             self._send_request("DELETE", endpoint)
             print("Reservation cancelled successfully!")
             cancellation_success = True  # Set flag to True if cancellation was successful
         except SlotUnavailableError as e:
-            print("Cancellation failed:", e)
+            print("\nCancellation failed:", e)
+            cancellation_success = True
         except InvalidTokenError as e:
-            print("Cancellation failed:", e)
+            print("\nCancellation failed:", e)
+            cancellation_success = True
+        except ReservationLimitError as e:
+            print("\nCancellation faild:", e)
+            cancellation_success = True
         except HTTPError as e:
-            print("Cancellation failed:", e)
-    # Only print "Reservation cancelled successfully!" if at least one cancellation was successful
+           print("\nCancellation failed:", e)
+           cancellation_success = True
+
+        # Only print "Reservation cancelled successfully!" if at least one cancellation was successful
         if not cancellation_success:
             print("This Reservation was not cancelled successfully.")
 
@@ -172,6 +187,10 @@ class ReservationApi:
     def reserve_slot(self, slot_id):
         """Attempt to reserve a slot for the client"""
         # Your code goes here
+
+        if not (1 <= slot_id <= 550):
+            print("\nError 403: Slot ID does not exist.")
+            return
         try:
             endpoint = f"reservation/{slot_id}"
             response = self._send_request("POST", endpoint)
@@ -181,5 +200,7 @@ class ReservationApi:
             print("Reservation failed:", e)
         except InvalidTokenError as e:
             print("Reservation failed:", e)
+        except ReservationLimitError as e:
+            print("Reservation faild:", e)
         except HTTPError as e:
             print("Reservation failed:", e)
