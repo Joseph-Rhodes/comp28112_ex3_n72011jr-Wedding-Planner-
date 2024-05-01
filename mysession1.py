@@ -8,44 +8,44 @@ def load_configuration(file_path):
     return config
 
 def initialize_api(config):
-    """Create an API object to communicate with the hotel API."""
-    hotel = reservationapi.ReservationApi(
-        config['hotel']['url'],
-        config['hotel']['key'],
+    """Create an API object to communicate with the band API."""
+    band = reservationapi.ReservationApi(
+        config['band']['url'],
+        config['band']['key'],
         int(config['global']['retries']),
         float(config['global']['delay'])
     )
-    return hotel
+    return band
 
 # Your code goes here
 def reserve_slot(api, slot_id):
     """Reserve a slot."""
-    print(f"Attempting to reserve slot {slot_id}:\n")
+    print(f"Reserving a reservation for slot {slot_id}:\n")
     print(api._send_request("postHold", slot_id))
 
 def delete_reservation(api, reservation_id):
     """Delete a reservation."""
-    print(f"\nAttempting to delete slot {reservation_id}:\n")
+    print(f"\nCancelling the reservation for slot {reservation_id}:\n")
     print(api._send_request("delete", reservation_id))
 
 def check_available(api, parameters):
     """Check availability."""
-    print("\nChecking available slots:\n")
+    print("\nChecking the available slots:\n")
     print(api._send_request("getAvailable", parameters))
 
 def check_reserved_slots(api, user_id):
     """Check slots reserved by a user."""
-    print("\nSlot reserved by you:\n")
+    print("\nSlots reserved by you:\n")
     print(api._send_request("getHold", user_id))
 
 if __name__ == "__main__":
     # Load configuration and Initialize the API
     config = load_configuration("api.ini")
-    hotel_api = initialize_api(config)
+    band_api = initialize_api(config)
     
     # Example usage
-    reserve_slot(hotel_api, "546")
-    check_reserved_slots(hotel_api, "0")
-    delete_reservation(hotel_api, "546")
-    check_reserved_slots(hotel_api, "0")
-    check_available(hotel_api,"0")
+    # reserve_slot(band_api, "358")
+    # check_reserved_slots(band_api, "0")
+    # delete_reservation(band_api, "298")
+    # check_reserved_slots(band_api, "0")
+    check_available(band_api,"0")

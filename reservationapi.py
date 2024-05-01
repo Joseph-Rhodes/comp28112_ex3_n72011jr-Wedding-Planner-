@@ -92,7 +92,7 @@ class ReservationApi:
 
             except HTTPError as e:
                 if 500 <= result.status_code <= 599:
-                    print(f"Server Side Error. Retrying after delay... // Try number:{tries}")
+                    print(f"Server Side Error. Retrying after delay... // Try Number: {tries}")
                     time.sleep(self.delay)
                 elif 500 > result.status_code >= 400:
                     self._handle_error(e)
@@ -115,7 +115,7 @@ class ReservationApi:
         elif error_status == 404:
             print("The request has not been processed.")
         elif error_status == 409:
-            print("Slot is not available.")
+            print("Slot is no longer available.")
         elif error_status == 451:
             print("The client already holds the maximum number of reservations.")
         else:
