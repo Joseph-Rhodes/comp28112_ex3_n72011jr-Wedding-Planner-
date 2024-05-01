@@ -15,15 +15,10 @@ import simplejson
 import warnings
 import time
 
-band_api_key = "7ad6349ed72b87725b4cdcb335caa08f79ab8378fd73e6104a241d68dbf28a7e"
-hotel_api_key = "1a8009a7266545e1bed7d000a74cee31273eee63b09be8bc9015c773ed837100"
-
-
-
 from requests.exceptions import HTTPError
 from exceptions import (
     BadRequestError, InvalidTokenError, BadSlotError, NotProcessedError,
-    SlotUnavailableError,ReservationLimitError)
+    SlotUnavailableError,ReservationLimitError, MaxRetriesExhaustedError)
 
 class ReservationApi:
     def __init__(self, base_url: str, token: str, retries: int, delay: float):
@@ -66,141 +61,89 @@ class ReservationApi:
 
         return reason
 
+
     def _headers(self) -> dict:
         """Create the authorization token header needed for API requests"""
-        return {
-            "Authorization": f"Bearer {self.token}"
-        }
+        # Your code goes here
+        return {"Authorization" : f"Bearer {self.token}"}
+    
 
     def _send_request(self, method: str, endpoint: str) -> dict:
-        """Send a request to the reservation API and convert errors to appropriate exceptions"""
-        url = f"{self.base_url}/{endpoint}"
-        headers = self._headers()
-
-        for _ in range(self.retries):
+        """Send a request to the reservation API and convert errors to
+           appropriate exceptions"""
+        tries = 0
+        while tries < self.retries + 1:
             try:
-                response = requests.request(method, url, headers=headers)
-                response.raise_for_status()
-                return response.json()
-
-            except HTTPError as err:
-                if response.status_code == 503:
-                    print("Service unavailable. Retrying after delay...")
-                    time.sleep(self.delay)
-                elif response.status_code == 400:
-                    raise BadRequestError(self._reason(response))
-                elif response.status_code == 401:
-                    raise InvalidTokenError(self._reason(response))
-                elif response.status_code == 403:
-                    raise BadSlotError(self._reason(response))
-                elif response.status_code == 404:
-                    raise NotProcessedError(self._reason(response))
-                elif response.status_code == 409:
-                    raise SlotUnavailableError(self._reason(response))
-                elif response.status_code == 451:
-                    raise ReservationLimitError(self._reason(response))
-                elif response.status_code == 500:
-                    raise HTTPError("Internal Server Error")
+                tries += 1
+                if method == "getHold":
+                    result = self.get_slots_held()
+                elif method == "getAvailable":
+                    result = self.get_slots_available()
+                elif method == "postHold":
+                    result = self.reserve_slot(endpoint)
+                elif method == "delete":
+                    result = self.release_slot(endpoint)
                 else:
-                    raise HTTPError(f"Unexpected HTTP Error: {response.status_code}")
+                    raise ValueError(f"Invalid method: {method}")
 
-            except Exception as e:
-                raise e
+                time.sleep(self.delay)
+                result.raise_for_status()
+                return result.json()
 
-            time.sleep(1)  # Add a one-second delay between requests
+            except HTTPError as e:
+                if 500 <= result.status_code <= 599:
+                    print(f"Server Side Error. Retrying after delay... // Try number:{tries}")
+                    time.sleep(self.delay)
+                elif 500 > result.status_code >= 400:
+                    self._handle_error(e)
+                else:
+                    print(f"Unknown error ({result.status_code}): {self._reason(result)}")
+                    exit()
+        
+        raise MaxRetriesExhaustedError("Maximum retries limit reached. Unable to complete the request.")
 
-        raise HTTPError("Maximum retries exceeded. Request failed.")
+    def _handle_error(self, error):
+        """Handle different types of errors"""
+        error_status = error.response.status_code
 
-    
-     # Allow for multiple retries if needed
-            # Perform the request.
+        if error_status == 400:
+            print("Bad Request")
+        elif error_status == 401:
+            print("The API token was invalid or missing.")
+        elif error_status == 403:
+            print("SlotId does not exist.")
+        elif error_status == 404:
+            print("The request has not been processed.")
+        elif error_status == 409:
+            print("Slot is not available.")
+        elif error_status == 451:
+            print("The client already holds the maximum number of reservations.")
+        else:
+            print("Unknown error occurred")
 
-            # Delay before processing the response to avoid swamping server.
-
-            # 200 response indicates all is well - send back the json data.
-
-            # 5xx responses indicate a server-side error, show a warning
-            # (including the try number).
-
-            # 400 errors are client problems that are meaningful, so convert
-            # them to separate exceptions that can be caught and handled by
-            # the caller.
-
-            # Anything else is unexpected and may need to kill the client.
-
-        # Get here and retries have been exhausted, throw an appropriate
-        # exception.
-
+        time.sleep(self.delay)
+        exit()
 
     def get_slots_available(self):
         """Obtain the list of slots currently available in the system"""
         # Your code goes here
-        try:
-            endpoint = "reservation/available"
-            response = self._send_request("GET", endpoint)
-            return response
-        except HTTPError as e:
-            print("Error retrieving available slots:", e)
+        headers = self._headers()
+        return requests.get(f"{self.base_url}/reservation/available", headers = headers)
 
     def get_slots_held(self):
         """Obtain the list of slots currently held by the client"""
         # Your code goes here
-        try:
-            endpoint = "reservation"
-            response = self._send_request("GET", endpoint)
-            return response
-        except HTTPError as e:
-            if e.response is not None and e.response.status_code == 500:
-            # Don't print the error message for server-side errors
-                pass
-            else:
-                print("Error retrieving held slots:", e)
-
+        headers = self._headers()
+        return requests.get(f"{self.base_url}/reservation", headers = headers)
 
     def release_slot(self, slot_id):
         """Release a slot currently held by the client"""
-        cancellation_success = False  # Flag to track if any cancellation was successful
-    
-        try:
-            endpoint = f"reservation/{slot_id}"
-            self._send_request("DELETE", endpoint)
-            print("Reservation cancelled successfully!")
-            cancellation_success = True  # Set flag to True if cancellation was successful
-        except SlotUnavailableError as e:
-            print("\nCancellation failed:", e)
-            cancellation_success = True
-        except InvalidTokenError as e:
-            print("\nCancellation failed:", e)
-            cancellation_success = True
-        except ReservationLimitError as e:
-            print("\nCancellation faild:", e)
-            cancellation_success = True
-        except HTTPError as e:
-           print("\nCancellation failed:", e)
-           cancellation_success = True
-
-        # Only print "Reservation cancelled successfully!" if at least one cancellation was successful
-        if not cancellation_success:
-            print("This Reservation was not cancelled successfully.")
-
-
+        # Your code goes here
+        headers = self._headers()
+        return requests.delete(f"{self.base_url}/reservation/{slot_id}", headers = headers)
+            
     def reserve_slot(self, slot_id):
         """Attempt to reserve a slot for the client"""
         # Your code goes here
-
-        if not (1 <= slot_id <= 550):
-            print("\nError 403: Slot ID does not exist.")
-            return
-        try:
-            endpoint = f"reservation/{slot_id}"
-            response = self._send_request("POST", endpoint)
-            print("Reservation successful!")
-            return response
-        except SlotUnavailableError as e:
-            print("Reservation failed:", e)
-        except InvalidTokenError as e:
-            print("Reservation failed:", e)
-        except ReservationLimitError as e:
-            print("Reservation faild:", e)
-        except HTTPError as e:
-            print("Reservation failed:", e)
+        headers = self._headers()
+        return requests.post(f"{self.base_url}/reservation/{slot_id}", headers = headers)

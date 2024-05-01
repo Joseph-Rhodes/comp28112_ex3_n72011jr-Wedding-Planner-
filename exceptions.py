@@ -30,3 +30,13 @@ class SlotUnavailableError(RequestException):
 # 451 error
 class ReservationLimitError(RequestException):
     """The client already holds the maximum number of reservations."""
+
+# Maximum Number of Tries
+class MaxRetriesExhaustedError(Exception):
+    """Exception raised when maximum retries are exhausted"""
+    def __init__(self, message="Maximum retries exhausted"):
+        self.message = message
+        super().__init__(self.message)
+
+    def __str__(self):
+        return self.message
