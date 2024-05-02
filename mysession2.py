@@ -139,6 +139,9 @@ if __name__ == "__main__":
     config = load_configuration("api.ini")
     hotel_api, band_api = initialize_api(config)
 
+    # Display current reservations
+    display_current_slots(hotel_api)
+    
     # Checking for errors when maybe 2 hotel slots are reserved and only 1 band slot reserved
     handle_slot_discrepancies(hotel_api, band_api)
 

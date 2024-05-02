@@ -115,7 +115,7 @@ class ReservationApi:
         elif error_status == 404:
             print("The request has not been processed.")
         elif error_status == 409:
-            print("Slot is no longer available.")
+            print("Slot is no longer available. Re-Run the Program")
         elif error_status == 451:
             print("The client already holds the maximum number of reservations.")
         else:
