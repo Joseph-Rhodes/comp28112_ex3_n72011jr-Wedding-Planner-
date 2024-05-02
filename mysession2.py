@@ -84,6 +84,19 @@ def reserve_earliest_common_slot(hotel_api, band_api, common_slots):
                 print(f"You have released slot: {reservation_to_delete}")
                 display_current_slots(hotel_api)
 
+
+def recheck_for_earlier_bookings(hotel_api, band_api):
+    """Recheck for earlier bookings."""
+    print("\nRechecking for earlier reservation slots...\n")
+    
+    # Fetch the latest list of common slots
+    common_slots = check_common_slots(hotel_api, band_api)
+    
+    # Reserve earliest common slot and release higher slot if necessary
+    reserve_earliest_common_slot(hotel_api, band_api, common_slots)
+    
+    # print("\nRechecking for earlier resrvation slots completed.\n")
+
 if __name__ == "__main__":
     # Load configuration and Initialize the API
     config = load_configuration("api.ini")
@@ -94,3 +107,6 @@ if __name__ == "__main__":
 
     # Reserve earliest common slot and release higher slot if necessary
     reserve_earliest_common_slot(hotel_api, band_api, common_slots)
+
+    # Recheck for earlier bookings
+    recheck_for_earlier_bookings(hotel_api, band_api)
