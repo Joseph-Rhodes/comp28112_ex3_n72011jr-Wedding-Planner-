@@ -45,7 +45,8 @@ if __name__ == "__main__":
     
     # Example usage
     # reserve_slot(band_api, "358")
+    # reserve_slot(band_api, "20")
     # check_reserved_slots(band_api, "0")
-    # delete_reservation(band_api, "298")
+    delete_reservation(band_api, "358")
     # check_reserved_slots(band_api, "0")
-    check_available(band_api,"0")
+    # check_available(band_api,"0")

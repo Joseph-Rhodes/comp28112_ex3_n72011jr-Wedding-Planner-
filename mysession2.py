@@ -50,6 +50,8 @@ def display_current_slots(api):
 def reserve_earliest_common_slot(hotel_api, band_api, common_slots):
     """Reserve the earliest common slot and release higher slot if necessary."""
     current_slots = hotel_api._send_request("getHold", "")
+    
+    
     if not current_slots:
         # If no current slots booked, reserve the earliest common slot
         earliest_slot = common_slots[0]['id']
@@ -63,9 +65,11 @@ def reserve_earliest_common_slot(hotel_api, band_api, common_slots):
         earliest_common_slot_id = common_slots[0]['id']
 
         # Reserve the earliest common slot
-        print(f"\nReserving earliest common slot: {earliest_common_slot_id}")
+        print(f"\nReserving earliest common slot: {earliest_common_slot_id}\n")
         hotel_api._send_request("postHold", earliest_common_slot_id)
+        print(f"Hotel was successfully reserved at slot {earliest_common_slot_id}")
         band_api._send_request("postHold", earliest_common_slot_id)
+        print(f"Band was successfully reserved at slot {earliest_common_slot_id}\n")
         print(f"You have reserved slot: {earliest_common_slot_id}")
         display_current_slots(hotel_api)
 
@@ -88,6 +92,9 @@ def reserve_earliest_common_slot(hotel_api, band_api, common_slots):
 def recheck_for_earlier_bookings(hotel_api, band_api):
     """Recheck for earlier bookings."""
     print("\nRechecking for earlier reservation slots...\n")
+
+    # Checking for errors when maybe 2 hotel slots are reserved and only 1 band slot reserved
+    handle_slot_discrepancies(hotel_api, band_api)
     
     # Fetch the latest list of common slots
     common_slots = check_common_slots(hotel_api, band_api)
@@ -97,10 +104,43 @@ def recheck_for_earlier_bookings(hotel_api, band_api):
     
     # print("\nRechecking for earlier resrvation slots completed.\n")
 
+def handle_slot_discrepancies(hotel_api, band_api):
+    """Handle discrepancies in booked slots between hotel and band."""
+    hotel_slots = hotel_api._send_request("getHold", "")
+    band_slots = band_api._send_request("getHold", "")
+
+    discrepancies_found = False
+
+    if len(hotel_slots) == 1:
+        # If hotel has 2 slots booked, cancel the unmatched band slot
+        for slot in band_slots:
+            if slot['id'] not in [h_slot['id'] for h_slot in hotel_slots]:
+                print(f"Cancelling band slot {slot['id']}...")
+                band_api._send_request("delete", slot['id'])
+                print(f"Band slot {slot['id']} cancelled.")
+                discrepancies_found = True
+                break
+
+    elif len(band_slots) == 1:
+        # If band has 2 slots booked, cancel the unmatched hotel slot
+        for slot in hotel_slots:
+            if slot['id'] not in [b_slot['id'] for b_slot in band_slots]:
+                print(f"Cancelling hotel slot {slot['id']}...")
+                hotel_api._send_request("delete", slot['id'])
+                print(f"Hotel slot {slot['id']} cancelled.")
+                discrepancies_found = True
+                break
+
+    if not discrepancies_found:
+        print("\nNo discrepancies found between booked slots.\n")
+
 if __name__ == "__main__":
     # Load configuration and Initialize the API
     config = load_configuration("api.ini")
     hotel_api, band_api = initialize_api(config)
+
+    # Checking for errors when maybe 2 hotel slots are reserved and only 1 band slot reserved
+    handle_slot_discrepancies(hotel_api, band_api)
 
     # Check availability of common slots
     common_slots = check_common_slots(hotel_api, band_api)
@@ -110,3 +150,11 @@ if __name__ == "__main__":
 
     # Recheck for earlier bookings
     recheck_for_earlier_bookings(hotel_api, band_api)
+
+    # Prompt user for rechecking
+    recheck = input("Do you want to recheck for earlier bookings? (y/n): ")
+    while recheck.lower() == 'y':
+        recheck_for_earlier_bookings(hotel_api, band_api)
+        recheck = input("Do you want to recheck for earlier bookings? (y/n): ")
+
+    print("Program stopped.")
