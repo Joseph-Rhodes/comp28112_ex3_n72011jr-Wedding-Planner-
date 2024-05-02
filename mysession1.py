@@ -44,9 +44,8 @@ if __name__ == "__main__":
     band_api = initialize_api(config)
     
     # Example usage
-    # reserve_slot(band_api, "358")
-    # reserve_slot(band_api, "20")
-    # check_reserved_slots(band_api, "0")
-    delete_reservation(band_api, "358")
-    # check_reserved_slots(band_api, "0")
-    # check_available(band_api,"0")
+    reserve_slot(band_api, "457")
+    check_reserved_slots(band_api, "0")
+    delete_reservation(band_api, "457")
+    check_reserved_slots(band_api, "0")
+    check_available(band_api,"0")
