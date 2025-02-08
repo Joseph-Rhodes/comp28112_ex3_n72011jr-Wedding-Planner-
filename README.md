@@ -92,8 +92,4 @@ Retries are implemented with an **exponential backoff mechanism** to avoid overw
 
 ---
 
-## License
-This project is for educational purposes and follows **University of Manchester's coursework policies**. Do **NOT** share API keys or credentials online.
-
----
 
